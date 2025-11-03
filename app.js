@@ -7,85 +7,94 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const port = 3000;
+const port = process.env.PORT || 8080;
 
-// Create connection to MySQL
+// ✅ MySQL connection
 const db = mysql.createConnection({
-    host: 'testdb-1.c34egoce037f.ap-south-1.rds.amazonaws.com',
-    user: 'root',
-    password: '12345678',
-    database: 'testdb_1'
+  host: process.env.DB_HOST || 'testdb-1.cnso6k62wnhp.ap-south-1.rds.amazonaws.com',
+  user: process.env.DB_USER || 'admin',
+  password: process.env.DB_PASS || '12345678',
+  database: process.env.DB_NAME || 'myapp_db'
 });
 
-// Connect to MySQL
 db.connect((err) => {
-    if (err) {
-        throw err;
-    }
-    console.log('MySQL Connected...');
+  if (err) {
+    console.error('❌ Database connection failed:', err);
+    return;
+  }
+  console.log('✅ MySQL Connected...');
 });
 
-// Serve the HTML file
+// ✅ Serve index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Create a table
+// ✅ Create table
 app.get('/createTable', (req, res) => {
-    let sql = 'CREATE TABLE IF NOT EXISTS items(id int AUTO_INCREMENT, name VARCHAR(255), PRIMARY KEY(id))';
-    db.query(sql, (err, result) => {
-        if (err) throw err;
-        res.send('Items table created...');
-    });
+  const sql = `
+    CREATE TABLE IF NOT EXISTS items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255)
+    )
+  `;
+  db.query(sql, (err) => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    res.send('✅ Table "items" created (or already exists)');
+  });
 });
 
-// Insert an item
+// ✅ Add item
 app.post('/addItem', (req, res) => {
-    let item = { name: req.body.name };
-    let sql = 'INSERT INTO items SET ?';
-    db.query(sql, item, (err, result) => {
-        if (err) throw err;
-        res.send('Item added...');
-    });
+  const { name } = req.body;
+  if (!name) return res.status(400).send('❌ Missing data');
+  db.query('INSERT INTO items SET ?', { name }, (err) => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    res.send('✅ Item added successfully');
+  });
 });
 
-// Get all items
+// ✅ Get all items
 app.get('/getItems', (req, res) => {
-    let sql = 'SELECT * FROM items';
-    db.query(sql, (err, results) => {
-        if (err) throw err;
-        res.json(results);
-    });
+  db.query('SELECT * FROM items', (err, results) => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    res.json(results);
+  });
 });
 
-// Get a single item by ID
-app.get('/getItem/:id', (req, res) => {
-    let sql = `SELECT * FROM items WHERE id = ${req.params.id}`;
-    db.query(sql, (err, result) => {
-        if (err) throw err;
-        res.json(result);
-    });
-});
-
-// Update an item
+// ✅ Update an item
 app.put('/updateItem/:id', (req, res) => {
-    let newName = req.body.name;
-    let sql = `UPDATE items SET name = ? WHERE id = ?`;
-    db.query(sql, [newName, req.params.id], (err, result) => {
-        if (err) throw err;
-        res.send('Item updated...');
-    });
+  const { id } = req.params;
+  const { name } = req.body;
+
+  if (!name || !id) {
+    return res.status(400).send('❌ Missing ID or name');
+  }
+
+  const sql = 'UPDATE items SET name = ? WHERE id = ?';
+  db.query(sql, [name, id], (err, result) => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    if (result.affectedRows === 0) return res.send('⚠️ No item found with that ID');
+    res.send('✅ Item updated successfully');
+  });
 });
 
-// Delete an item
+// ✅ Delete an item
 app.delete('/deleteItem/:id', (req, res) => {
-    let sql = `DELETE FROM items WHERE id = ?`;
-    db.query(sql, [req.params.id], (err, result) => {
-        if (err) throw err;
-        res.send('Item deleted...');
-    });
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).send('❌ Missing ID');
+  }
+
+  const sql = 'DELETE FROM items WHERE id = ?';
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.status(500).send(err.sqlMessage);
+    if (result.affectedRows === 0) return res.send('⚠️ No item found with that ID');
+    res.send('✅ Item deleted successfully');
+  });
 });
 
 app.listen(port, () => {
-    console.log(`Server started on port ${port}`);
+  console.log(`🚀 Server started on port ${port}`);
 });

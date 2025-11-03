@@ -1,74 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Operations</title>
+  <meta charset="UTF-8" />
+  <title>CRUD Operations</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    pre {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-top: 20px;
+      width: 400px;
+      text-align: left;
+      display: inline-block;
+      border-radius: 8px;
+    }
+  </style>
 </head>
 <body>
-<h1>CRUD Operations</h1>
-<button onclick="createTable()">Create Table</button>
-<button onclick="addItem()">Add Item</button>
-<button onclick="getItems()">Get Items</button>
-<button onclick="updateItem()">Update Item</button>
-<button onclick="deleteItem()">Delete Item</button>
+  <h1>CRUD Operations</h1>
 
-<div id="result"></div>
+  <button onclick="createTable()">Create Table</button>
+  <button onclick="addItem()">Add Item</button>
+  <button onclick="getItems()">Get Items</button>
+  <button onclick="updateItem()">Update Item</button>
+  <button onclick="deleteItem()">Delete Item</button>
 
-<script>
-    function createTable() {
-        fetch('/createTable')
-            .then(response => response.text())
-            .then(data => document.getElementById('result').innerText = data);
+  <pre id="output"></pre>
+
+  <script>
+    function showOutput(text) {
+      document.getElementById('output').textContent = text;
     }
 
-    function addItem() {
-        const name = prompt('Enter item name:');
-        fetch('/addItem', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name })
-        })
-            .then(response => response.text())
-            .then(data => document.getElementById('result').innerText = data);
+    async function createTable() {
+      const res = await fetch('/createTable');
+      showOutput(await res.text());
     }
 
-    function getItems() {
-        fetch('/getItems')
-            .then(response => response.json())
-            .then(data => {
-                const resultDiv = document.getElementById('result');
-                resultDiv.innerHTML = '';
-                data.forEach(item => {
-                    resultDiv.innerHTML += `ID: ${item.id}, Name: ${item.name}<br>`;
-                });
-            });
+    async function addItem() {
+      const name = prompt("Enter item name:");
+      if (!name) return alert("Missing data");
+      const res = await fetch('/addItem', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name })
+      });
+      showOutput(await res.text());
     }
 
-    function updateItem() {
-        const id = prompt('Enter item ID to update:');
-        const name = prompt('Enter new item name:');
-        fetch(`/updateItem/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name })
-        })
-            .then(response => response.text())
-            .then(data => document.getElementById('result').innerText = data);
+    async function getItems() {
+      const res = await fetch('/getItems');
+      const data = await res.json();
+      let txt = "Items:\n" + data.map(i => `${i.id}. ${i.name}`).join('\n');
+      showOutput(txt);
     }
 
-    function deleteItem() {
-        const id = prompt('Enter item ID to delete:');
-        fetch(`/deleteItem/${id}`, {
-            method: 'DELETE'
-        })
-            .then(response => response.text())
-            .then(data => document.getElementById('result').innerText = data);
-    }
-</script>
+    async function updateItem() {
+  const id = prompt("Enter item ID to update:");
+  const name = prompt("Enter new name:");
+  if (!id || !name) return alert("Missing data");
+
+  const res = await fetch(`/updateItem/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  showOutput(await res.text());
+}
+
+    async function deleteItem() {
+  const id = prompt("Enter item ID to delete:");
+  if (!id) return alert("Missing ID");
+
+  const res = await fetch(`/deleteItem/${id}`, {
+    method: 'DELETE'
+  });
+  showOutput(await res.text());
+}
+  </script>
 </body>
 </html>
