@@ -1,112 +1,107 @@
-# Project-6 Deploying a Scalable CRUD App Using AWS Elastic Beanstalk
+# Project: Deploying a Scalable CRUD App Using AWS Elastic Beanstalk
 
 ## Project Architecture
-
-1. Client: Access via web browser.
-
-2. Elastic Beanstalk:
+1. **Client**: Access via web browser.
+2. **Elastic Beanstalk**:
    - Creates Load Balancer for traffic distribution.
    - Creates Auto Scaling Group with EC2 Instances (servers run the app).
    - Automatically adds EC2 instances when traffic increases (scaling).
+3. **RDS Database**: External database for storing data (e.g., added items). Database as a Service (DaaS).
 
-3. RDS Database: External database for storing data (e.g., added items). Database as a Service (DaaS).
+**Key Advantage**: We do not need to manage servers, scaling, load balancing, or any infrastructure. All of this is fully managed by Elastic Beanstalk.
 
-## Step 1: Prepare Application and Database
+## Step-by-Step Implementation
 
-### Node.js CRUD App
+### 1. Create RDS MySQL Database (External DB)
+- Create MySQL RDS instance (Free Tier eligible).
+- Note down:
+  - Endpoint URL (e.g., `mydb.abcdefghijk.us-east-1.rds.amazonaws.com`)
+  - Port: `3306`
+  - Database name, Username, Password
 
-- Written in Node.js for CRUD (Create, Read, Update, Delete) operations.
-- package.json defines dependencies: express, mysql, body-parser.
-- Starts with npm start (node app.js).
-- Runs on Port 3000.
-- app.js has variables for RDS connection: Host URL, User, Password, Database Name.
-- Frontend: index.html in public folder.
-- Zip files (app.js, package.json, public folder) as Archive.zip.
+### 2. Update Node.js Application Code (`app.js`)
+Update the database connection in `app.js`:
 
-### AWS RDS Database
+```javascript
+const connection = mysql.createPool({
+  host     : 'your-rds-endpoint.xxxx.rds.amazonaws.com',  // Change RDS database details of app.js
+  user     : 'admin',
+  password : 'yourpassword',
+  database : 'cruddb',
+  port     : 3306
+});
+```
 
-- Engine: MySQL.
-- Template: Free tier.
-- Settings: DB identifier, Master Username, Master Password.
-- Instance & Storage: t4g.micro, 20GB storage.
-- Connectivity:
-  - Public access: Yes.
-  - Security Group: Allow access from Beanstalk environment requests.
-- After creation: Endpoint URL (e.g., testdb-one.xxxxx.rds.amazonaws.com), Port 3306 (MySQL).
-- Update app.js with Endpoint URL, Username, Password, Database Name.
+**Why needed**: The app must point to the actual RDS instance to store and retrieve data.
 
-## Step 2: Create Elastic Beanstalk Environment
+### 3. Archive the Website Files
 
-1. Create Environment:
-   - Application name: Crud-app.
-   - Environment name: Crud-hyphen-env.
-   - Platform: Node.js, version e.g., 14.
-   - Application code: Sample application.
-   - Presets: Custom configuration.
 
-2. Configure Service Access:
-   - Create or use Service Role and EC2 instance profile for permissions (EC2 instances, Security Groups).
 
-3. Configure Networking and Database:
-   - Networking: Default VPC, multiple subnets (for High Availability).
-   - Database: No configuration (use external RDS).
+Create a ZIP file containing:
+- `app.js`
+- `package.json`
+- `public/` folder
 
-4. Configure Instance Traffic and Scaling:
-   - Capacity: Single instance.
-   - Security Group: Allow inbound traffic on Port 3000 (app runs on 3000).
+**Command (run in project root):**
+```bash
+zip -r Archive.zip app.js package.json public/
+```
 
-5. Review and Submit:
-   - Creates EC2 instance, S3 bucket (for logs), Elastic IP.
-   - Environment Health: Green and Ok.
+**Why this command**: Elastic Beanstalk only accepts ZIP archives for deployment. `-r` ensures all files inside `public/` folder are included recursively.
 
-## Step 3: Deploy and Validate
+### 4. Create Elastic Beanstalk Application & Environment
+1. Go to AWS Elastic Beanstalk Console → **Create application**
+   - Application name: `crudapp`
+2. Create environment:
+   - Environment name: `crudapp-env`
+   - Platform: Node.js (latest supported version)
+   - Upload code: **Sample application** (will be replaced later)
 
-1. Initial Check (Sample App):
-   - Click domain link, shows Congratulations sample application.
+### 5. Upload and Deploy the Application
+1. Go to environment → `crudapp-env`
+2. Click **Upload and Deploy**
+3. Choose `Archive.zip`
+4. Version label: `v1.0`
+5. Click **Deploy**
 
-2. Deploy App:
-   - In console, Upload and deploy.
-   - Choose Archive.zip.
-   - Version label: crudapp-version-1.
-   - Deploy.
+#### Deployment Process:
+- Updates environment (all at once).
+- Replaces sample app with your ZIP code on the EC2 instance.
+- After completion → Health turns **Green**.
 
-3. Deployment Process:
-   - Updates environment (all at once).
-   - Replaces sample app with zip code on EC2 instance.
-   - Successful, Health Green.
+### 6. Access the Application
+1. Copy the environment URL (e.g., `crudapp-env.eba-xyzabc.us-east-1.elasticbeanstalk.com`)
+2. Open in browser **with port 3000**:
+   ```
+   http://crudapp-env.eba-xyzabc.us-east-1.elasticbeanstalk.com:3000
+   ```
 
-4. Test (502 Error):
-   - Domain shows 502 Bad Gateway.
-   - Reason: Nginx proxy looks for default port 80, app on 3000.
-   - Solution: Add :3000 to URL (e.g., http://crudapp-env.elasticbeanstalk.com:3000).
+#### Common Issue: 502 Bad Gateway Error
+- **Symptoms**: Opening URL without `:3000` shows **502 Bad Gateway**
+- **Reason**: Nginx reverse proxy (default in Beanstalk) listens on port 80 and forwards to port 80, but your Node.js app runs on port 3000.
+- **Solution**: Always access via `:3000` (temporary fix for single-instance environment).
 
-5. Final Validation:
-   - UI (index.html) shows.
-   - Add Item: Enter name (e.g., beanstack-project) (Create to RDS).
-   - Get Items: Shows added item (Read from RDS).
-   - Delete Item: Enter ID, delete (Delete from RDS).
-   - Get Items: List empty.
+### 7. Final Validation (Test CRUD Operations)
+- **Create Table** → Creates table in RDS
+- **Add Item** → Inserts data into RDS
+- **Get Items** → Reads data from RDS
+- **Update Item** → Updates record
+- **Delete Item** → Deletes record by ID
+
+All operations successfully interact with the external RDS database.
+
+## Services Used (Managed by Elastic Beanstalk)
+- Elastic Beanstalk (PaaS)
+- EC2 instances (inside Auto Scaling Group)
+- Application Load Balancer
+- Amazon RDS (MySQL)
+- VPC, Subnets, Security Groups
+- CloudWatch (Logs & Monitoring)
+- S3 (for deployment artifacts and logs)
 
 ## Conclusion
+Successfully deployed a scalable Node.js CRUD application using AWS Elastic Beanstalk with an external RDS MySQL database.  
+All infrastructure (EC2 instances, Auto Scaling, Load Balancing, networking, monitoring) is completely managed by Elastic Beanstalk — you only manage your application code and database connection.
 
-Successfully deployed Node.js app with external RDS on AWS Elastic Beanstalk. Beanstalk manages servers, logging, scaling; focus on application code.
-
-This project demonstrates the deployment of a simple CRUD (Create, Read, Update, Delete) application using AWS Elastic Beanstalk, a Platform-as-a-Service (PaaS) offering. The primary focus is to explore how PaaS can simplify the deployment, management, and scaling of web applications by abstracting infrastructure management.
-
-## Architecture Diagram
-
-1. Client and DNS:
-   - Client (e.g., web browser) accesses domain name.
-   - Route 53 (AWS DNS) resolves to Load Balancer IP.
-
-2. Elastic Load Balancer (ELB):
-   - Client sends HTTP request to ELB.
-   - ELB distributes traffic to servers (EC2 instances).
-
-3. Application Environment:
-   - EC2: Runs Node.js application code.
-   - VPC: Secure private network for EC2 instances.
-   - Auto-scaling: Monitors load.
-     - Scales out: Adds EC2 instances if traffic increases.
-     - Scales in: Removes instances if traffic decreases.
-   - App Version Deployment: Deploy new versions to environment.
+**Project demonstrates**: How Platform-as-a-Service (PaaS) simplifies deployment, management, and scaling by fully abstracting infrastructure.
