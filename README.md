@@ -72,9 +72,9 @@ zip -r Archive.zip app.js package.json public/
 
 ### 6. Access the Application
 1. Copy the environment URL (e.g., `crudapp-env.eba-xyzabc.us-east-1.elasticbeanstalk.com`)
-2. Open in browser **with port 3000**:
+2. Open in browser :
    ```
-   http://crudapp-env.eba-xyzabc.us-east-1.elasticbeanstalk.com:3000
+   http://crudapp-env.eba-xyzabc.us-east-1.elasticbeanstalk.com
    ```
 
 #### Common Issue: 502 Bad Gateway Error
